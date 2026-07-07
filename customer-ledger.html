@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 500 Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+  :root {
+    --bg:        #0F1210;
+    --bg-raised: #161B18;
+    --line:      #2A322D;
+    --text:      #E8E4DC;
+    --text-dim:  #8B9289;
+    --amber:     #C89B3C;
+    --amber-dim: #8A6C2C;
+    --gain:      #7C9885;
+    --loss:      #B5654A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', serif;
+    min-height: 100vh;
+    padding: 48px 20px 80px;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--text-dim);
+    text-align: center;
+    margin: 0 0 40px;
+  }
+
+  /* ── The counter — the signature element ── */
+  .counter-frame {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 36px 20px 28px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .counter-frame::before {
+    content: "REMAINING TO 500";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--text-dim);
+  }
+
+  .counter {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .digit {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(48px, 14vw, 96px);
+    line-height: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    width: clamp(52px, 15vw, 100px);
+    text-align: center;
+    padding: 8px 0 4px;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.4s ease;
+  }
+
+  .subline {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .subline strong {
+    color: var(--gain);
+    font-weight: 600;
+  }
+
+  /* ── Milestone strip ── */
+  .milestones {
+    display: flex;
+    justify-content: space-between;
+    margin: 28px 0 36px;
+    padding: 0 4px;
+  }
+
+  .milestone {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+
+  .milestone:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 55%;
+    width: 90%;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .milestone-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    margin: 0 auto 8px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .milestone.hit .milestone-dot {
+    background: var(--amber);
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px rgba(200, 155, 60, 0.15);
+  }
+
+  .milestone-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .milestone.hit .milestone-label {
+    color: var(--amber);
+  }
+
+  /* ── Action row ── */
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 11px 16px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex: 1;
+  }
+
+  button:hover {
+    border-color: var(--amber-dim);
+    color: var(--amber);
+  }
+
+  button.danger:hover {
+    border-color: var(--loss);
+    color: var(--loss);
+  }
+
+  /* ── Ledger ── */
+  .ledger-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .ledger-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .ledger-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .ledger {
+    border-top: 1px solid var(--line);
+  }
+
+  .entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .entry-stamp {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .entry-stamp.join { background: var(--gain); }
+  .entry-stamp.leave { background: var(--loss); }
+
+  .entry-name {
+    flex: 1;
+    color: var(--text);
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+  }
+
+  .entry-action {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .entry-date {
+    color: var(--text-dim);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+    max-width: 340px;
+    width: 100%;
+  }
+
+  .modal h2 {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 500;
+    font-size: 17px;
+    margin: 0 0 16px;
+  }
+
+  .modal input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .modal input:focus {
+    outline: none;
+    border-color: var(--amber-dim);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    flex: 1;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-raised);
+    border: 1px solid var(--amber-dim);
+    color: var(--amber);
+    padding: 12px 20px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 20;
+    text-align: center;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">Trading System &middot; Customer Ledger</div>
+  <h1>Every name here is one step closer to a real business.</h1>
+
+  <div class="counter-frame">
+    <div class="counter" id="counter"></div>
+    <div class="subline"><strong id="activeCount">0</strong> active &middot; <span id="joinedCount">0</span> joined all-time</div>
+  </div>
+
+  <div class="milestones" id="milestones"></div>
+
+  <div class="actions">
+    <button onclick="openModal('join')">+ Log new customer</button>
+    <button class="danger" onclick="openModal('leave')">&minus; Log a cancellation</button>
+  </div>
+
+  <div class="ledger-header">
+    <div class="ledger-title">Ledger</div>
+    <div class="ledger-count" id="ledgerCount">0 entries</div>
+  </div>
+  <div class="ledger" id="ledger"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Log new customer</h2>
+    <input type="text" id="nameInput" placeholder="Name or identifier" maxlength="40">
+    <div class="modal-actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button id="modalConfirm" onclick="confirmEntry()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GOAL = 500;
+const MILESTONES = [50, 100, 200, 350, 500];
+let entries = [];
+let pendingType = 'join';
+
+function loadEntries() {
+  try {
+    const stored = localStorage.getItem('ledger_entries');
+    entries = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    entries = [];
+  }
+}
+
+function saveEntries() {
+  try {
+    localStorage.setItem('ledger_entries', JSON.stringify(entries));
+  } catch (e) {
+    console.error('Could not save', e);
+  }
+}
+
+function getActiveCount() {
+  const joined = entries.filter(e => e.type === 'join').length;
+  const left   = entries.filter(e => e.type === 'leave').length;
+  return Math.max(0, joined - left);
+}
+
+function getJoinedCount() {
+  return entries.filter(e => e.type === 'join').length;
+}
+
+function renderCounter() {
+  const remaining = Math.max(0, GOAL - getActiveCount());
+  const digits = String(remaining).padStart(3, '0').split('');
+  const counterEl = document.getElementById('counter');
+  counterEl.innerHTML = digits.map(d => `<div class="digit">${d}</div>`).join('');
+  document.getElementById('activeCount').textContent = getActiveCount();
+  document.getElementById('joinedCount').textContent = getJoinedCount();
+}
+
+function renderMilestones() {
+  const active = getActiveCount();
+  const el = document.getElementById('milestones');
+  el.innerHTML = MILESTONES.map(m => `
+    <div class="milestone ${active >= m ? 'hit' : ''}">
+      <div class="milestone-dot"></div>
+      <div class="milestone-label">${m}</div>
+    </div>
+  `).join('');
+}
+
+function renderLedger() {
+  const el = document.getElementById('ledger');
+  const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+  document.getElementById('ledgerCount').textContent = `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`;
+
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty">No entries yet. Log your first customer above.</div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(e => {
+    const date = new Date(e.timestamp);
+    const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `
+      <div class="entry">
+        <div class="entry-stamp ${e.type}"></div>
+        <div class="entry-name">${escapeHtml(e.name)}</div>
+        <div class="entry-action">${e.type === 'join' ? 'Joined' : 'Left'}</div>
+        <div class="entry-date">${dateStr}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderAll() {
+  renderCounter();
+  renderMilestones();
+  renderLedger();
+}
+
+function openModal(type) {
+  pendingType = type;
+  document.getElementById('modalTitle').textContent = type === 'join' ? 'Log new customer' : 'Log a cancellation';
+  document.getElementById('nameInput').value = '';
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('nameInput').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function confirmEntry() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+
+  const prevActive = getActiveCount();
+  entries.push({ name, type: pendingType, timestamp: Date.now() });
+  saveEntries();
+  renderAll();
+  closeModal();
+
+  const newActive = getActiveCount();
+  if (pendingType === 'join') {
+    if (MILESTONES.includes(newActive)) {
+      showToast(`Milestone hit — ${newActive} active customers.`);
+    } else {
+      showToast(`Logged. ${GOAL - newActive} remaining to 500.`);
+    }
+  } else {
+    showToast(`Logged. ${newActive} active customers.`);
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+document.getElementById('nameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') confirmEntry();
+});
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+loadEntries();
+renderAll();
+</script>
+
+</body>
+</html>
